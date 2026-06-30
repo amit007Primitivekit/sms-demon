@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "sms-demon-placeholder",
-    "storage_bucket": "sms-demon-placeholder.appspot.com"
+    "project_number": "620021027383",
+    "project_id": "sms-demon",
+    "storage_bucket": "sms-demon.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:620021027383:android:9e4b142c08095982e125b2",
         "android_client_info": {
           "package_name": "com.smsdemon"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "REPLACE_WITH_REAL_KEY"
+          "current_key": "AIzaSyCaPSSaDQtsL88steJ4A94JqYKpqo6BIv4"
         }
       ],
       "services": {
