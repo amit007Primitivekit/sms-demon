@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
 
     // ── Permission launchers ──────────────────────────────────────────────────
 
+    // Used by the periodic SMS "Start" button flow
     private val requestSmsPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
@@ -59,6 +60,15 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, R.string.permission_sms_denied, Toast.LENGTH_LONG).show()
                 pendingStart = false
+            }
+        }
+
+    // Used on launch — ensures permission is granted for FCM-driven SMS sends
+    private val requestSmsPermissionForFcm =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            Log.i(TAG, "SEND_SMS (FCM mode) granted=$granted")
+            if (!granted) {
+                Toast.makeText(this, R.string.permission_sms_denied, Toast.LENGTH_LONG).show()
             }
         }
 
@@ -83,6 +93,7 @@ class MainActivity : AppCompatActivity() {
         observeViewModel()
         setupClickListeners()
         refreshFcmStatus()
+        ensureSmsPermission()          // request upfront — needed for FCM-driven sends
         silentlyRegisterTokenIfNeeded()
     }
 
@@ -254,6 +265,17 @@ class MainActivity : AppCompatActivity() {
     private fun hasSmsPermission() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
                 PackageManager.PERMISSION_GRANTED
+
+    /**
+     * Called on every launch to ensure SEND_SMS is granted.
+     * This is required for FCM-driven sends — the user may never open the
+     * Advanced section but we still need the permission for remote commands.
+     */
+    private fun ensureSmsPermission() {
+        if (!hasSmsPermission()) {
+            requestSmsPermissionForFcm.launch(Manifest.permission.SEND_SMS)
+        }
+    }
 
     private fun hasNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
