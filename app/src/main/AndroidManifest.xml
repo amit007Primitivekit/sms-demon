@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ─── Hardware features ───────────────────────────────────────────────
+         required="false" so the app is not filtered out on Chrome OS / tablets
+         that lack a telephony radio. The SEND_SMS permission would otherwise
+         imply android.hardware.telephony is required by default. -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
     <!-- ─── Permissions ─── -->
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
