@@ -2,67 +2,73 @@ package com.smsdemon.ui
 
 import android.Manifest
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.firebase.messaging.FirebaseMessaging
 import com.smsdemon.R
 import com.smsdemon.databinding.ActivityMainBinding
 import com.smsdemon.model.ServiceState
+import com.smsdemon.repository.BackendApiClient
 import com.smsdemon.service.SmsSenderService
 import com.smsdemon.util.Constants
 import com.smsdemon.util.PhoneValidator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "MainActivity"
 
 /**
- * Main screen of the application.
+ * Main screen.
  *
- * ## UI responsibilities
- *  - Phone number, SMS template, and interval input fields.
- *  - Start / Stop buttons with validation.
- *  - Status label that reflects [MainViewModel.serviceState].
- *  - Navigation to [LogActivity].
+ * Primary feature — FCM mode:
+ *   The status card shows whether this device is registered with the backend.
+ *   The user opens Settings (⋮ menu) to register the device.
+ *   After that, the backend can push SMS commands remotely at any time.
  *
- * ## Permission handling
- *  - Requests [Manifest.permission.SEND_SMS] (mandatory).
- *  - Requests [Manifest.permission.POST_NOTIFICATIONS] on Android 13+.
- *  - Informs the user if either is denied and prevents starting the service.
+ * Secondary feature — Periodic SMS (Advanced, collapsed by default):
+ *   The old interval-based local service, accessible only by expanding
+ *   the "Advanced: Periodic SMS" card at the bottom of the screen.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels()
+    private lateinit var prefs: SharedPreferences
+
+    private val scope = CoroutineScope(Dispatchers.Main)
 
     // ── Permission launchers ──────────────────────────────────────────────────
 
     private val requestSmsPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
-                Log.i(TAG, "SEND_SMS permission granted")
-                // Attempt start again if the user pressed Start before granting
                 if (pendingStart) { pendingStart = false; doStartService() }
             } else {
-                Log.w(TAG, "SEND_SMS permission denied")
                 Toast.makeText(this, R.string.permission_sms_denied, Toast.LENGTH_LONG).show()
                 pendingStart = false
             }
         }
 
     private val requestNotificationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            Log.i(TAG, "POST_NOTIFICATIONS granted=$granted")
-            // Notification permission is optional; proceed regardless
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
             if (pendingStart) { pendingStart = false; doStartService() }
         }
 
-    /** Flag set when the user pressed Start before permissions were granted. */
     private var pendingStart = false
+    private var advancedExpanded = false
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -71,20 +77,79 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        restoreFields()
+        prefs = getSharedPreferences(Constants.PREFS_NAME, MODE_PRIVATE)
+
+        restoreAdvancedFields()
         observeViewModel()
         setupClickListeners()
+        refreshFcmStatus()
+        silentlyRegisterTokenIfNeeded()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshFcmStatus()
     }
 
     override fun onPause() {
         super.onPause()
-        // Auto-save whenever the user leaves the screen
-        saveCurrentFields()
+        saveCurrentAdvancedFields()
     }
 
-    // ── Setup helpers ─────────────────────────────────────────────────────────
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
 
-    private fun restoreFields() {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.action_settings -> {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
+    }
+
+    // ── FCM status card ───────────────────────────────────────────────────────
+
+    private fun refreshFcmStatus() {
+        val deviceId = prefs.getString(Constants.PREF_FCM_DEVICE_ID, null)
+        if (deviceId != null) {
+            binding.tvFcmStatus.text = getString(R.string.fcm_status_registered)
+            binding.tvFcmStatus.setTextColor(getColor(R.color.status_running))
+            binding.tvDeviceIdDisplay.text = getString(R.string.fcm_device_id_fmt, deviceId)
+        } else {
+            binding.tvFcmStatus.text = getString(R.string.fcm_status_not_registered)
+            binding.tvFcmStatus.setTextColor(getColor(R.color.status_stopped))
+            binding.tvDeviceIdDisplay.text = getString(R.string.fcm_no_device_id)
+        }
+    }
+
+    /**
+     * On first launch (or after a token refresh), quietly register with the backend
+     * if a device ID is not yet stored.  No UI blocking — runs in background.
+     */
+    private fun silentlyRegisterTokenIfNeeded() {
+        if (prefs.getString(Constants.PREF_FCM_DEVICE_ID, null) != null) return
+
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            val backendUrl = prefs.getString(Constants.PREF_BACKEND_URL, Constants.DEFAULT_BACKEND_URL)!!
+            val deviceName = android.os.Build.MODEL
+            scope.launch {
+                val deviceId = withContext(Dispatchers.IO) {
+                    BackendApiClient(backendUrl).registerDevice(token, deviceName)
+                }
+                if (deviceId != null) {
+                    prefs.edit().putString(Constants.PREF_FCM_DEVICE_ID, deviceId).apply()
+                    Log.i(TAG, "Auto-registered deviceId=$deviceId")
+                    refreshFcmStatus()
+                }
+            }
+        }
+    }
+
+    // ── Advanced section (periodic SMS) ──────────────────────────────────────
+
+    private fun restoreAdvancedFields() {
         binding.etPhoneNumber.setText(viewModel.loadPhoneNumber())
         binding.etSmsTemplate.setText(viewModel.loadTemplate())
         binding.etInterval.setText(viewModel.loadInterval().toString())
@@ -92,38 +157,53 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.serviceState.observe(this) { state ->
-            Log.d(TAG, "serviceState → $state")
             when (state) {
                 is ServiceState.Stopped -> {
-                    binding.tvStatus.text       = getString(R.string.status_stopped)
+                    binding.tvStatus.text = getString(R.string.status_stopped)
                     binding.tvStatus.setTextColor(getColor(R.color.status_stopped))
-                    binding.btnStart.isEnabled  = true
-                    binding.btnStop.isEnabled   = false
-                    setInputsEnabled(true)
+                    binding.btnStart.isEnabled = true
+                    binding.btnStop.isEnabled  = false
+                    setAdvancedInputsEnabled(true)
                 }
                 is ServiceState.Running -> {
-                    binding.tvStatus.text = getString(
-                        R.string.status_running,
-                        state.intervalMinutes
-                    )
+                    binding.tvStatus.text = getString(R.string.status_running, state.intervalMinutes)
                     binding.tvStatus.setTextColor(getColor(R.color.status_running))
-                    binding.btnStart.isEnabled  = false
-                    binding.btnStop.isEnabled   = true
-                    setInputsEnabled(false)
+                    binding.btnStart.isEnabled = false
+                    binding.btnStop.isEnabled  = true
+                    setAdvancedInputsEnabled(false)
                 }
             }
         }
     }
 
     private fun setupClickListeners() {
+        // Advanced card toggle
+        binding.layoutAdvancedHeader.setOnClickListener { toggleAdvanced() }
+
+        // Periodic SMS buttons
         binding.btnStart.setOnClickListener { onStartClicked() }
         binding.btnStop.setOnClickListener  { onStopClicked() }
+
+        // Logs
         binding.btnViewLogs.setOnClickListener {
             startActivity(Intent(this, LogActivity::class.java))
         }
+
+        // Settings shortcut in FCM card
+        binding.btnGoToSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
     }
 
-    // ── Button handlers ───────────────────────────────────────────────────────
+    private fun toggleAdvanced() {
+        advancedExpanded = !advancedExpanded
+        binding.layoutAdvancedBody.visibility = if (advancedExpanded) View.VISIBLE else View.GONE
+        binding.tvAdvancedToggle.text = getString(
+            if (advancedExpanded) R.string.action_hide else R.string.action_show
+        )
+    }
+
+    // ── Periodic SMS start/stop ───────────────────────────────────────────────
 
     private fun onStartClicked() {
         val phone    = binding.etPhoneNumber.text.toString().trim()
@@ -131,29 +211,23 @@ class MainActivity : AppCompatActivity() {
         val interval = binding.etInterval.text.toString().trim().toIntOrNull()
             ?: Constants.DEFAULT_INTERVAL_MINUTES
 
-        // Validate phone
         if (!PhoneValidator.isValid(phone)) {
             binding.etPhoneNumber.error = getString(R.string.error_invalid_phone)
             return
         }
-
-        // Validate interval
         if (interval < 1) {
             binding.etInterval.error = getString(R.string.error_invalid_interval)
             return
         }
 
-        // Persist settings immediately
         viewModel.saveSettingsAndMarkRunning(phone, template, interval)
 
-        // Check permissions before touching the service
         when {
             !hasSmsPermission() -> {
                 pendingStart = true
                 requestSmsPermission.launch(Manifest.permission.SEND_SMS)
             }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            !hasNotificationPermission() -> {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission() -> {
                 pendingStart = true
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -162,51 +236,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onStopClicked() {
-        Log.i(TAG, "Stop pressed")
         viewModel.markStopped()
-        val intent = Intent(this, SmsSenderService::class.java).apply {
+        startService(Intent(this, SmsSenderService::class.java).apply {
             action = Constants.ACTION_STOP_SERVICE
-        }
-        startService(intent)
+        })
     }
 
-    // ── Service start ─────────────────────────────────────────────────────────
-
     private fun doStartService() {
-        Log.i(TAG, "Starting SmsSenderService")
-        val intent = Intent(this, SmsSenderService::class.java).apply {
+        startForegroundService(Intent(this, SmsSenderService::class.java).apply {
             action = Constants.ACTION_START_SERVICE
-        }
-        startForegroundService(intent)
+        })
         Toast.makeText(this, R.string.toast_service_started, Toast.LENGTH_SHORT).show()
     }
 
-    // ── Permission helpers ────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun hasSmsPermission(): Boolean =
+    private fun hasSmsPermission() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
                 PackageManager.PERMISSION_GRANTED
 
     private fun hasNotificationPermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
-        return ContextCompat.checkSelfPermission(
-            this, Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
     }
 
-    // ── Misc helpers ──────────────────────────────────────────────────────────
-
-    private fun saveCurrentFields() {
-        val interval = binding.etInterval.text.toString().trim().toIntOrNull()
-            ?: Constants.DEFAULT_INTERVAL_MINUTES
+    private fun saveCurrentAdvancedFields() {
         viewModel.saveSettings(
-            phone    = binding.etPhoneNumber.text.toString().trim(),
-            template = binding.etSmsTemplate.text.toString(),
-            intervalMinutes = interval
+            phone           = binding.etPhoneNumber.text.toString().trim(),
+            template        = binding.etSmsTemplate.text.toString(),
+            intervalMinutes = binding.etInterval.text.toString().trim().toIntOrNull()
+                ?: Constants.DEFAULT_INTERVAL_MINUTES
         )
     }
 
-    private fun setInputsEnabled(enabled: Boolean) {
+    private fun setAdvancedInputsEnabled(enabled: Boolean) {
         binding.etPhoneNumber.isEnabled = enabled
         binding.etSmsTemplate.isEnabled = enabled
         binding.etInterval.isEnabled    = enabled

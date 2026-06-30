@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- ── App title ─────────────────────────────────────── -->
+        <!-- ── App title ─────────────────────────────────────────── -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="0dp"
@@ -22,14 +22,14 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- ── Status label ──────────────────────────────────── -->
+        <!-- ── FCM status card ────────────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardStatus"
+            android:id="@+id/cardFcmStatus"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardElevation="4dp"
+            android:layout_marginTop="12dp"
             app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTitle">
@@ -37,135 +37,233 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:padding="12dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_status"
-                    android:textAppearance="?attr/textAppearanceBody1"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_fcm_mode"
+                        android:textAppearance="?attr/textAppearanceSubtitle2"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvFcmStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/fcm_status_checking"
+                        android:textAppearance="?attr/textAppearanceBody2" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvStatus"
-                    android:layout_width="0dp"
+                    android:id="@+id/tvDeviceIdDisplay"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/status_stopped"
-                    android:textAppearance="?attr/textAppearanceBody1" />
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="?attr/textAppearanceCaption"
+                    android:fontFamily="monospace"
+                    android:alpha="0.7"
+                    android:text="@string/fcm_no_device_id" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGoToSettings"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/action_open_settings"
+                    app:icon="@drawable/ic_timer" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ── Phone number ───────────────────────────────────── -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPhoneNumber"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        <!-- ── Advanced: Periodic SMS (collapsible) ───────────────── -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAdvanced"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:hint="@string/hint_phone_number"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="?attr/colorPrimary"
+            app:strokeWidth="1dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardStatus"
-            app:startIconDrawable="@drawable/ic_phone">
+            app:layout_constraintTop_toBottomOf="@id/cardFcmStatus">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPhoneNumber"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="phone"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:orientation="vertical">
 
-        <!-- ── SMS template ───────────────────────────────────── -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilSmsTemplate"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:hint="@string/hint_sms_template"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilPhoneNumber"
-            app:startIconDrawable="@drawable/ic_message">
+                <!-- Header / toggle row -->
+                <LinearLayout
+                    android:id="@+id/layoutAdvancedHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSmsTemplate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:lines="3"
-                android:maxLines="5"
-                android:gravity="top" />
-        </com.google.android.material.textfield.TextInputLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_advanced_periodic_sms"
+                        android:textAppearance="?attr/textAppearanceBody1"
+                        android:textStyle="bold" />
 
-        <!-- Helper text below template -->
-        <TextView
-            android:id="@+id/tvTemplateHint"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/hint_template_placeholders"
-            android:textAppearance="?attr/textAppearanceCaption"
-            android:textColor="?attr/colorOnSurface"
-            android:alpha="0.6"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilSmsTemplate" />
+                    <TextView
+                        android:id="@+id/tvAdvancedToggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/action_show"
+                        android:textAppearance="?attr/textAppearanceBody2"
+                        android:textColor="?attr/colorPrimary" />
+                </LinearLayout>
 
-        <!-- ── Interval ───────────────────────────────────────── -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilInterval"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:hint="@string/hint_interval"
-            app:suffixText="@string/suffix_minutes"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTemplateHint"
-            app:startIconDrawable="@drawable/ic_timer">
+                <!-- Collapsible body — hidden by default -->
+                <LinearLayout
+                    android:id="@+id/layoutAdvancedBody"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:paddingTop="0dp"
+                    android:visibility="gone">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etInterval"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
+                    <!-- Status label -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
 
-        <!-- ── Start / Stop buttons ────────────────────────────── -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStart"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginEnd="8dp"
-            android:text="@string/action_start"
-            app:icon="@drawable/ic_play"
-            app:layout_constraintEnd_toStartOf="@id/btnStop"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tilInterval" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_status"
+                            android:textAppearance="?attr/textAppearanceBody2"
+                            android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStop"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginStart="8dp"
-            android:enabled="false"
-            android:text="@string/action_stop"
-            app:icon="@drawable/ic_stop"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/btnStart"
-            app:layout_constraintTop_toBottomOf="@id/tilInterval" />
+                        <TextView
+                            android:id="@+id/tvStatus"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/status_stopped"
+                            android:textAppearance="?attr/textAppearanceBody2" />
+                    </LinearLayout>
 
-        <!-- ── View Logs button ────────────────────────────────── -->
+                    <!-- Phone number -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilPhoneNumber"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/hint_phone_number"
+                        app:startIconDrawable="@drawable/ic_phone">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etPhoneNumber"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="phone"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- SMS template -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilSmsTemplate"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:hint="@string/hint_sms_template"
+                        app:startIconDrawable="@drawable/ic_message">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSmsTemplate"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textMultiLine"
+                            android:lines="3"
+                            android:maxLines="5"
+                            android:gravity="top" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:id="@+id/tvTemplateHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/hint_template_placeholders"
+                        android:textAppearance="?attr/textAppearanceCaption"
+                        android:alpha="0.6" />
+
+                    <!-- Interval -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilInterval"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:hint="@string/hint_interval"
+                        app:suffixText="@string/suffix_minutes"
+                        app:startIconDrawable="@drawable/ic_timer">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etInterval"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Start / Stop buttons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStart"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:text="@string/action_start"
+                            app:icon="@drawable/ic_play" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStop"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:enabled="false"
+                            android:text="@string/action_stop"
+                            app:icon="@drawable/ic_stop" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── View Logs button ────────────────────────────────────── -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnViewLogs"
             style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -176,7 +274,7 @@
             app:icon="@drawable/ic_list"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnStart" />
+            app:layout_constraintTop_toBottomOf="@id/cardAdvanced" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

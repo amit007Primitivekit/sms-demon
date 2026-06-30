@@ -26,3 +26,6 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# Backend — local only, never pushed to GitHub
+backend/

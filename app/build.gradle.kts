@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.services)
     id("kotlin-kapt")
 }
 
@@ -62,6 +63,14 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
+
+    // OkHttp — backend API calls (register token, send ACK)
+    implementation(libs.okhttp)
+
+    // Firebase — BOM keeps all versions in sync
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.analytics.ktx)
 
     // Testing
     testImplementation(libs.junit)

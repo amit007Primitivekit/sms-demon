@@ -12,6 +12,8 @@ object Constants {
     const val PREF_SMS_TEMPLATE     = "sms_template"
     const val PREF_INTERVAL_MINUTES = "interval_minutes"
     const val PREF_SERVICE_RUNNING  = "service_running"
+    const val PREF_FCM_DEVICE_ID    = "fcm_device_id"     // backend-assigned UUID
+    const val PREF_BACKEND_URL      = "backend_url"
 
     // ── Service Intent actions ────────────────────────────────────────────────
     const val ACTION_START_SERVICE  = "com.smsdemon.action.START"
@@ -31,4 +33,15 @@ object Constants {
     const val DEFAULT_INTERVAL_MINUTES = 5
     const val DEFAULT_SMS_TEMPLATE =
         "OTP Test ID:{random} Time:{timestamp} Count:{counter}"
+
+    // ── Backend API ───────────────────────────────────────────────────────────
+    /** Default backend URL — change in app Settings or override with PREF_BACKEND_URL. */
+    const val DEFAULT_BACKEND_URL   = "https://smsdemon.virt.cc.cd"
+
+    // FCM data message keys (must match backend/src/services/fcm.js)
+    const val FCM_KEY_TYPE          = "type"
+    const val FCM_KEY_COMMAND_ID    = "commandId"
+    const val FCM_KEY_PHONE         = "phoneNumber"
+    const val FCM_KEY_MESSAGE       = "message"
+    const val FCM_VALUE_SEND_SMS    = "send_sms"
 }

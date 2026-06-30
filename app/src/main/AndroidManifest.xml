@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- ─── Hardware features ───────────────────────────────────────────────
-         required="false" so the app is not filtered out on Chrome OS / tablets
-         that lack a telephony radio. The SEND_SMS permission would otherwise
-         imply android.hardware.telephony is required by default. -->
+    <!-- ─── Hardware features ──────────────────────────────────────────────────
+         required="false" so the app is not filtered from Chrome OS / tablets. -->
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
 
-    <!-- ─── Permissions ─── -->
+    <!-- ─── Permissions ────────────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Required on API 34+ for foreground services that send data -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required for FCM token registration + ACK calls to the backend -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -25,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmsDemon">
 
-        <!-- Main UI Activity -->
+        <!-- ── Activities ───────────────────────────────────────────────────── -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">
@@ -35,13 +35,19 @@
             </intent-filter>
         </activity>
 
-        <!-- Log Activity -->
         <activity
             android:name=".ui.LogActivity"
             android:exported="false"
             android:parentActivityName=".ui.MainActivity" />
 
-        <!-- Foreground Service that drives periodic SMS sending -->
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <!-- ── Services ─────────────────────────────────────────────────────── -->
+
+        <!-- Periodic SMS foreground service (Advanced / optional feature) -->
         <service
             android:name=".service.SmsSenderService"
             android:enabled="true"
@@ -52,7 +58,18 @@
                 android:value="sms_sender" />
         </service>
 
-        <!-- Boot receiver – restarts the service after device reboot -->
+        <!-- FCM message receiver — PRIMARY feature.
+             Handles send_sms data messages pushed from the backend.
+             The intent-filter with MESSAGING_EVENT must be present for FCM delivery. -->
+        <service
+            android:name=".service.SmsFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- ── Receivers ────────────────────────────────────────────────────── -->
         <receiver
             android:name=".service.BootReceiver"
             android:enabled="true"
