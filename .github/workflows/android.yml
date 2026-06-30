@@ -16,7 +16,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Set up JDK 17 ──────────────────────────────────────────────────
+      # ── 2. JDK 17 + built-in Gradle cache ────────────────────────────────
+      # setup-java handles ~/.gradle/caches and ~/.gradle/wrapper caching
+      # automatically when cache: gradle is set — no separate cache step needed.
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -24,34 +26,23 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 3. Cache Gradle dependencies ──────────────────────────────────────
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # ── 4. Grant execute permission for gradlew ───────────────────────────
+      # ── 3. Grant execute permission for gradlew ───────────────────────────
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # ── 4. Run unit tests ─────────────────────────────────────────────────
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
       # ── 5. Run lint ────────────────────────────────────────────────────────
       - name: Run lint
-        run: ./gradlew lint
+        run: ./gradlew lintDebug
 
-      # ── 6. Run unit tests ─────────────────────────────────────────────────
-      - name: Run unit tests
-        run: ./gradlew test
-
-      # ── 7. Build debug APK ────────────────────────────────────────────────
+      # ── 6. Build debug APK ────────────────────────────────────────────────
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      # ── 8. Upload APK artifact ────────────────────────────────────────────
+      # ── 7. Upload APK artifact ────────────────────────────────────────────
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -59,7 +50,7 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
 
-      # ── 9. Upload lint report ─────────────────────────────────────────────
+      # ── 8. Upload lint report ─────────────────────────────────────────────
       - name: Upload lint report
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,7 +59,7 @@ jobs:
           path: app/build/reports/lint-results-debug.html
           retention-days: 7
 
-      # ── 10. Upload test report ────────────────────────────────────────────
+      # ── 9. Upload test report ─────────────────────────────────────────────
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4

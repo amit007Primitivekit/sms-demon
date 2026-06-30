@@ -14,8 +14,10 @@ local.properties
 **/local.properties
 **/.idea/
 
-# Gradle cache
+# Gradle local cache directories (NOT the wrapper — that must be committed)
 .gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 
 # Keystore (NEVER commit)
 *.jks
