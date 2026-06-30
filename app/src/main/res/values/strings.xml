@@ -1,0 +1,52 @@
+<resources>
+    <string name="app_name">SMS Demon</string>
+
+    <!-- Labels -->
+    <string name="label_status">Status:</string>
+
+    <!-- Hints -->
+    <string name="hint_phone_number">Destination phone number</string>
+    <string name="hint_sms_template">SMS template</string>
+    <string name="hint_interval">Interval</string>
+    <string name="suffix_minutes">min</string>
+    <string name="hint_template_placeholders">Placeholders: {random}, {timestamp}, {counter}</string>
+
+    <!-- Buttons / Actions -->
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_view_logs">View Send Log</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- Status -->
+    <string name="status_stopped">Stopped</string>
+    <string name="status_running">Running — every %1$d min</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_phone">Enter a valid phone number</string>
+    <string name="error_invalid_interval">Interval must be at least 1 minute</string>
+
+    <!-- Toasts -->
+    <string name="toast_service_started">Service started</string>
+    <string name="toast_service_stopped">Service stopped</string>
+
+    <!-- Permissions -->
+    <string name="permission_sms_denied">SMS permission is required to send messages.</string>
+
+    <!-- Notification -->
+    <string name="notification_title">SMS Demon is running</string>
+    <string name="notification_starting">Starting…</string>
+    <string name="notification_last_sent">Sent #%1$d · next in %2$d min</string>
+    <string name="notification_invalid_number">Invalid phone number – check settings</string>
+
+    <!-- Log screen -->
+    <string name="title_log_screen">Send Log</string>
+    <string name="empty_log">No messages sent yet.</string>
+    <string name="log_counter">SMS #%1$d</string>
+    <string name="log_random">Random: %1$s</string>
+    <string name="log_success">✓ Sent</string>
+    <string name="log_failure">✗ Failed: %1$s</string>
+
+    <!-- Clear dialog -->
+    <string name="dialog_clear_title">Clear log?</string>
+    <string name="dialog_clear_message">All log entries will be permanently deleted.</string>
+</resources>
