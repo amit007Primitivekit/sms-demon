@@ -43,5 +43,7 @@ object Constants {
     const val FCM_KEY_COMMAND_ID    = "commandId"
     const val FCM_KEY_PHONE         = "phoneNumber"
     const val FCM_KEY_MESSAGE       = "message"
+    const val FCM_KEY_PING_ID       = "pingId"
     const val FCM_VALUE_SEND_SMS    = "send_sms"
+    const val FCM_VALUE_PING        = "ping"
 }

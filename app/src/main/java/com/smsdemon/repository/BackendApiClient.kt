@@ -1,7 +1,6 @@
 package com.smsdemon.repository
 
 import android.util.Log
-import com.smsdemon.util.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -16,27 +15,32 @@ private const val TAG = "BackendApiClient"
 /**
  * Lightweight HTTP client for the SMS Demon backend.
  *
- * Uses OkHttp directly (no Retrofit) to keep dependencies minimal.
- * All calls run on [Dispatchers.IO].
+ * Three responsibilities:
+ *  1. [registerDevice]  — register FCM token on launch / token refresh
+ *  2. [pong]            — reply to a backend presence ping as fast as possible
+ *  3. [ackCommand]      — report SMS send result back to backend
  *
- * @param baseUrl Base URL of the backend, e.g. "https://smsdemon.virt.cc.cd"
+ * Online/offline state is determined entirely by the backend at request time
+ * via FCM ping/pong — no heartbeats, no polling needed from the app side.
  */
 class BackendApiClient(private val baseUrl: String) {
 
     private val json = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    // ── Device registration ───────────────────────────────────────────────────
+
     /**
-     * Registers (or refreshes) the device's FCM token with the backend.
+     * Registers (or refreshes) this device's FCM token with the backend.
      *
      * @param fcmToken   Current FCM registration token.
-     * @param deviceName Human-readable device name shown in the backend dashboard.
-     * @return The backend-assigned device UUID, or null on failure.
+     * @param deviceName Human-readable name shown in the backend device list.
+     * @return Backend-assigned device UUID, or null on failure.
      */
     suspend fun registerDevice(fcmToken: String, deviceName: String): String? =
         withContext(Dispatchers.IO) {
@@ -53,26 +57,59 @@ class BackendApiClient(private val baseUrl: String) {
 
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        Log.e(TAG, "registerDevice failed: HTTP ${response.code}")
+                        Log.e(TAG, "registerDevice HTTP ${response.code}")
                         return@withContext null
                     }
-                    val obj = JSONObject(response.body!!.string())
+                    val obj      = JSONObject(response.body!!.string())
                     val deviceId = obj.getJSONObject("device").getString("id")
                     Log.i(TAG, "Device registered: id=$deviceId")
                     deviceId
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "registerDevice exception: ${e.message}", e)
+                Log.e(TAG, "registerDevice: ${e.message}", e)
                 null
             }
         }
 
+    // ── Presence ──────────────────────────────────────────────────────────────
+
     /**
-     * Sends an ACK to the backend after the device has attempted to send the SMS.
+     * Responds to a backend presence ping as quickly as possible.
      *
-     * @param commandId  The command UUID received in the FCM data message.
-     * @param success    Whether [android.telephony.SmsManager] succeeded.
-     * @param errorMsg   Optional error description if success == false.
+     * The backend sends an FCM "ping" data message and waits at most ~4 s for
+     * this HTTP POST.  Speed matters — call this immediately on receiving the
+     * FCM message without any additional delay.
+     *
+     * @param deviceId Backend-assigned device UUID (included in the FCM payload).
+     * @param pingId   Unique ID for this ping round (included in the FCM payload).
+     */
+    suspend fun pong(deviceId: String, pingId: String) = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject().apply {
+                put("pingId", pingId)
+            }.toString().toRequestBody(json)
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/devices/$deviceId/pong")
+                .post(body)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                Log.d(TAG, "Pong → deviceId=$deviceId pingId=$pingId HTTP=${response.code}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Pong failed deviceId=$deviceId pingId=$pingId: ${e.message}")
+        }
+    }
+
+    // ── Commands ──────────────────────────────────────────────────────────────
+
+    /**
+     * Reports the SMS send result back to the backend after attempting to send.
+     *
+     * @param commandId Backend command UUID from the FCM data message.
+     * @param success   Whether SmsManager.sendTextMessage succeeded.
+     * @param errorMsg  Optional error description when success == false.
      */
     suspend fun ackCommand(
         commandId: String,
@@ -92,13 +129,13 @@ class BackendApiClient(private val baseUrl: String) {
 
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    Log.i(TAG, "ACK sent for commandId=$commandId success=$success")
+                    Log.i(TAG, "ACK commandId=$commandId success=$success")
                 } else {
-                    Log.w(TAG, "ACK failed: HTTP ${response.code} for commandId=$commandId")
+                    Log.w(TAG, "ACK HTTP ${response.code} commandId=$commandId")
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "ackCommand exception for commandId=$commandId: ${e.message}", e)
+            Log.e(TAG, "ackCommand commandId=$commandId: ${e.message}", e)
         }
     }
 }

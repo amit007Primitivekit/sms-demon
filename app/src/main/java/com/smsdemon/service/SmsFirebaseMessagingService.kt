@@ -87,6 +87,7 @@ class SmsFirebaseMessagingService : FirebaseMessagingService() {
 
         when (data[Constants.FCM_KEY_TYPE]) {
             Constants.FCM_VALUE_SEND_SMS -> handleSendSmsCommand(data)
+            Constants.FCM_VALUE_PING     -> handlePing(data)
             else -> Log.w(TAG, "Unknown FCM message type: ${data[Constants.FCM_KEY_TYPE]}")
         }
     }
@@ -97,6 +98,24 @@ class SmsFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Handles a presence ping from the backend.
+     *
+     * The backend is waiting at most ~4 seconds for this pong to arrive.
+     * We launch on IO immediately — no heavy work, just one HTTP call.
+     */
+    private fun handlePing(data: Map<String, String>) {
+        val pingId   = data[Constants.FCM_KEY_PING_ID] ?: run { Log.e(TAG, "ping missing pingId"); return }
+        val deviceId = data["deviceId"]                ?: run { Log.e(TAG, "ping missing deviceId"); return }
+
+        Log.d(TAG, "Ping received pingId=$pingId deviceId=$deviceId — sending pong")
+
+        serviceScope.launch {
+            val backendUrl = prefs.getString(Constants.PREF_BACKEND_URL, Constants.DEFAULT_BACKEND_URL)!!
+            BackendApiClient(backendUrl).pong(deviceId, pingId)
+        }
+    }
 
     private fun handleSendSmsCommand(data: Map<String, String>) {
         val commandId   = data[Constants.FCM_KEY_COMMAND_ID]   ?: run { Log.e(TAG, "Missing commandId"); return }
